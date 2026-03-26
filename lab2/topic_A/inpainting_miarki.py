@@ -8,24 +8,22 @@ from skimage.metrics import peak_signal_noise_ratio as calc_psnr
 from skimage.metrics import structural_similarity as calc_ssim
 
 INPUT_DIR  = Path("./images")
-OUTPUT_DIR = Path("./results")
+OUTPUT_DIR = Path("./result")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 IMAGE_FILES = sorted(INPUT_DIR.glob("*.jpg"))
 
 SEG = dict(
-    b_minus_r_thresh = 30,   # B - R > X  (miarki: ~70-130 diff)
-    b_minus_g_thresh = 20,   # B - G > X
-    b_min_val        = 80,   # minimalna jasność kanału B
-    dilate_k         = 7,    # rozmiar jądra dylatacji [px]
-    dilate_iter      = 2,    # liczba iteracji dylatacji
+    b_minus_r_thresh = 30,
+    b_minus_g_thresh = 20,
+    b_min_val        = 80,
+    dilate_k         = 7,
+    dilate_iter      = 2,
 )
 
-# ── Parametry inpaintingu ───────────────────────────────────────────────────
 INPAINT_RADIUS = 7
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 def segment_blue_calipers(img_bgr: np.ndarray, params: dict) -> np.ndarray:
     b = img_bgr[:, :, 0].astype(np.int16)
     g = img_bgr[:, :, 1].astype(np.int16)
@@ -51,7 +49,6 @@ def apply_inpainting(img_bgr, mask, method='telea', radius=7):
 
 
 def compute_metrics_no_ref(original_bgr, restored_bgr):
-    """Metryki bezreferencyjna: wariancja Laplasjanu i gradient RMS."""
     def lap_var(img):
         g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(float)
         return float(cv2.Laplacian(g, cv2.CV_64F).var())
