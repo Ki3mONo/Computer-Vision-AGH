@@ -1,13 +1,3 @@
-"""
-inpainting_miarki_real.py
-=========================
-Skrypt dopasowany do rzeczywistych obrazów USG z przesłanego zestawu.
-Miarki: niebieskie przerywane linie pomiarowe (B-R > 40, B-G > 25).
-
-Uruchomienie:
-    python3 inpainting_miarki_real.py
-"""
-
 import cv2
 import numpy as np
 import matplotlib
@@ -17,14 +7,12 @@ from pathlib import Path
 from skimage.metrics import peak_signal_noise_ratio as calc_psnr
 from skimage.metrics import structural_similarity as calc_ssim
 
-# ── Ścieżki ────────────────────────────────────────────────────────────────
-INPUT_DIR  = Path("/mnt/user-data/uploads")
-OUTPUT_DIR = Path("/mnt/user-data/outputs/inpainting_results")
+INPUT_DIR  = Path("./images")
+OUTPUT_DIR = Path("./results")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 IMAGE_FILES = sorted(INPUT_DIR.glob("*.jpg"))
 
-# ── Parametry segmentacji (skalibrowane na podstawie analizy pikseli) ──────
 SEG = dict(
     b_minus_r_thresh = 30,   # B - R > X  (miarki: ~70-130 diff)
     b_minus_g_thresh = 20,   # B - G > X
@@ -39,13 +27,6 @@ INPAINT_RADIUS = 7
 
 # ══════════════════════════════════════════════════════════════════════════════
 def segment_blue_calipers(img_bgr: np.ndarray, params: dict) -> np.ndarray:
-    """
-    Segmentuje niebieskie miarki USG na podstawie dominacji kanału B.
-    
-    Strategia:
-      1. Maska kolor: B - R > thresh i B - G > thresh i B > min_val
-      2. Dylatacja morfologiczna – poszerz maskę
-    """
     b = img_bgr[:, :, 0].astype(np.int16)
     g = img_bgr[:, :, 1].astype(np.int16)
     r = img_bgr[:, :, 2].astype(np.int16)
@@ -111,11 +92,6 @@ def save_comparison(img_bgr, mask, restored_bgr, name, out_dir):
     plt.close()
     return out_path
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  GŁÓWNA PĘTLA
-# ══════════════════════════════════════════════════════════════════════════════
-
 all_metrics = []
 
 print(f"{'='*65}")
@@ -156,7 +132,6 @@ for img_path in IMAGE_FILES:
           f"maska={coverage:.3f}%  "
           f"LapVar: {m['LapVar_orig']:.0f} → {m['LapVar_inpainted']:.0f}")
 
-# ── Podsumowanie tabelaryczne ──────────────────────────────────────────────
 print(f"\n{'='*65}")
 print(f"  PODSUMOWANIE METRYK (metryki bezreferencyjna)")
 print(f"{'='*65}")
@@ -170,7 +145,6 @@ for m in all_metrics:
 
 print(f"\n  Wyniki zapisane w: {OUTPUT_DIR.resolve()}")
 
-# ── Zapis CSV ──────────────────────────────────────────────────────────────
 import csv
 csv_path = OUTPUT_DIR / "metrics_report.csv"
 with open(csv_path, 'w', newline='') as f:
