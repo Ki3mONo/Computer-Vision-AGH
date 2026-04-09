@@ -1,0 +1,30 @@
+Celem ćwiczenia jest wykonanie segmentacji wybranego obszaru oraz zapoznanie się z metodą superpikseli i innymi algorytmami segmentacji.
+
+Ćwiczenie wykonujemy w tych samych zespołach. Każdy zespół musi przygotować krótki notebook według instrukcji poniżej. Wszystkie zespoły wykonują te same ćwiczenia, ale na innych obrazach.
+
+Zadania:
+
+Spróbuj wykonać segmentację głównego obszaru na zdjęciu (zmiany skórnej lub mięśnia) z użyciem klasycznych metod poznanych na zajęciach poprzednich (np. binaryzacja). Zidentyfikuj problemy.
+
+Sprawdź, które biblioteki programistyczne zawierają metody takie jak KMeans, SLIC, RAG.
+
+Zapoznaj się / przypomnij sobie zasadę działania algorytmu klasteryzacji KMeans. Zastanów się, jak może być użyta do segmentacji. Wykonaj segmentację po kolorze (kwantyzację barw). Sprawdź różne progi kolorów.
+
+Zapoznaj się ze sposobem działania algorytmu SLIC, generującego tzw. superpiksele. Wyodrębnij superpiksele obrazu. Sprawdź różne parametry algorytmu.
+
+Wykonaj segmentację obrazu łącząc superpiksele metodą RAG (Region Adjacency Graph).
+
+Dobierz parametry algorytmu tak, aby wyniki wyszły w miarę dobre dla wszystkich przypadków. 
+
+Przygotuj kod, który wczytuje dużą liczbę obrazów, przetwarza i zapisuje otrzymane segmentacje do pliku.
+
+Przetestuj skuteczność segmentacji z użyciem metryk takich jak Dice lub Jaccard. Do tego celu musisz posiadać maski referencyjne. Wykonaj samodzielnie dwie przykładowe maski referencyjne ręcznie (np. w programie graficznym typu paint, gimp) i oblicz dla nich wskaźniki Dice i Jaccard.
+
+* Jeśli otrzymane powyższymi metodami wyniki segmentacji nie są zadowalające, rozważ inne metody.
+
+
+Podczas tych zajęć nie prezentujemy wyników. Na następnych zajęciach ćwiczenie będzie kontynuowane i rozszerzone o dodatkowe zadania - wtedy zaprezentujemy całość.
+
+
+Zadanie dodatkowe - dla chętnych:
+Zapoznaj się z budową i zasadą działania sieci neuronowych typu UNet - najpopularniejszych architektur do precyzyjnej segmentacji. Zastanów się, jak mogłyby być użyte w tym zadaniu.
