@@ -1,0 +1,36 @@
+Celem ćwiczenia jest zapoznanie ze sposobami opisu kształtu i zastosowanie ich do klasyfikacji.
+
+Zadania
+
+Zbiór danych
+
+1. Pobierz prosty zbiór danych benchmarkowych.
+2. Podziel na dane treningowe, walidacyjne i testowe.
+3. Oblicz środek ciężkości obiektu i wykadruj obraz tak, aby obiekt znajdował się na środku obrazu.
+4. Znormalizuj rozmiary obrazów, aby były podobnej wielkości.
+
+Proste cechy opisu kształtu
+
+5.Wybierz kilka prostych cech takich jak np. pole powierzchni, obwód, średnica, czy rozmiar prostokąta otaczającego.
+6. Wybierz kilka złożonych cech takich jak np. asymetria, kwadratura, "compactness", najdłuższy/najkrótszy/średni promień.
+
+Klasyfikacja
+
+7. Wybierz kilka obliczonych wcześniej cech. Znormalizuj je do wspólnego zakresu.
+8. Wykonaj klasyfikację dowolną metodą - np. regresja, kNN, drzewo decyzyjne
+9. Oblicz skuteczność (accuracy) oraz dodatkowe metryki (np. precision/recall) lub narysuj confusion matrix
+
+Zaawansowane deskryptory
+
+10. Wybierz i zaimplementuj jedną lub więcej z poniższych metod:
+
+Deskryptor Fouriera (Fourier Descriptor),
+Momenty Zernike'a (Zernike Moments),
+Przestrzeń Wieloskalowa Krzywizn (Curvature Scale Space),
+Kontekst Kształtu (Shape Context),
+Sygnatura Kształtu (Shape Signature)
+11. Zapoznaj się z podstawami teoretycznymi jednej używanej metody i zaprezentuj jej działanie pozostałym grupom
+12. Użyj zaawansowanych deskryptorów do klasyfikacji:
+13. Porównaj wyniki klasyfikacji:
+- tylko z użyciem jednego powyższego deskryptora (np. momentów Zernika)
+- z połączeniem prostych metod (np. powierzchnia) z zaawansowanym deskryptorem
