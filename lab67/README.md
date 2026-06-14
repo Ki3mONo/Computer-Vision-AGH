@@ -1,10 +1,3 @@
-# lab67 — Image Classification Project (CV AGH)
-
-Classical computer-vision pipeline for the final project: preprocess a real
-image dataset, extract classical features (texture / colour / shape), classify
-with classical ML (SVM, decision trees — **no neural networks**), and report
-metrics on a held-out test set. See [`TASK.md`](TASK.md) / [`ZADANIE.md`](ZADANIE.md).
-
 ## Layout
 
 ```
