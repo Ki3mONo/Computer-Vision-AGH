@@ -1,0 +1,172 @@
+% Dokumentacja projektu — Wizja komputerowa (AGH)
+% Kompilacja:  pdflatex dokumentacja.tex   (dwukrotnie, dla spisu i odnośników)
+% UWAGA: limit 5 stron (z obrazami, tabelami i bibliografią włącznie).
+%        Przekroczenie limitu = 0 pkt. Marginesy i odstępy są celowo zwarte.
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+
+% Ścieżka do rysunków eksportowanych z notatnika (viz.* zwraca obiekt Figure,
+% który można zapisać przez fig.savefig("docs/figures/...")).
+\graphicspath{{figures/}}
+
+\title{\vspace{-1.5em}Klasyfikacja obrazów metodami klasycznej wizji komputerowej}
+\author{Hubert Miklas \and \textit{[współautor]} \\[2pt]
+\small Akademia Górniczo-Hutnicza --- Wizja komputerowa}
+\date{\vspace{-1em}\small \today}
+
+\begin{document}
+\maketitle
+\vspace{-1.5em}
+
+% ============================================================ %
+\section{Wprowadzenie i zbiór danych}
+% ============================================================ %
+Celem projektu jest klasyfikacja obrazów wyłącznie metodami klasycznej wizji
+komputerowej i uczenia maszynowego (bez sieci neuronowych). Potok obejmuje:
+wczytanie danych, preprocessing, ekstrakcję cech, klasyfikację oraz dobór
+parametrów na zbiorze treningowo-walidacyjnym i ocenę na osobnym zbiorze
+testowym.
+
+\textbf{Zbiór danych.} % TODO: opisać WYBRANY zbiór (1-2 zdania) + skąd pochodzi.
+Pracujemy na zbiorze \texttt{[nazwa]} zawierającym \num{[N]} obrazów RGB
+w \num{[K]} klasach. Kod jest skonfigurowany tak, by jednym przełącznikiem
+(\texttt{get\_config(...)}) wybrać jeden z trzech zbiorów:
+(i) liście ziemniaka \emph{early blight} vs \emph{healthy} (\num{305} obrazów),
+(ii) liście ziemniaka \emph{early} vs \emph{late blight} (\num{2000} obrazów),
+(iii) owoce \emph{jabłka} vs \emph{pomidory} (\num{391}, z gotowym podziałem
+train/test). % TODO: zostawić tylko ten faktycznie użyty; resztę usunąć.
+
+\begin{figure}[h]
+  \centering
+  % TODO: viz.show_class_samples(...) -> fig.savefig("figures/samples.png")
+  % \includegraphics[width=0.95\linewidth]{samples.png}
+  \fbox{\parbox[c][2.2cm][c]{0.95\linewidth}{\centering\small
+    [Rys.~--- przykładowe obrazy z każdej klasy (\texttt{viz.show\_class\_samples})]}}
+  \caption{Reprezentatywne próbki z poszczególnych klas zbioru.}
+  \label{fig:samples}
+\end{figure}
+
+% ============================================================ %
+\section{Preprocessing}
+% ============================================================ %
+% TODO: opisać realnie zastosowane kroki i dobrane parametry; usunąć niewykorzystane.
+Zastosowano następujący łańcuch przetwarzania (moduł \texttt{preprocessing}):
+\begin{itemize}\itemsep1pt
+  \item \textbf{Usunięcie artefaktów} --- filtracja medianowa/bilateralna
+        ograniczająca szum i artefakty kompresji JPEG.
+  \item \textbf{Poprawa jasności i koloru} --- CLAHE na kanale \emph{L}
+        (przestrzeń LAB) oraz korekcja balansu bieli metodą \emph{gray-world}.
+  \item \textbf{Segmentacja obiektu od tła} --- progowanie [Otsu / w przestrzeni
+        HSV / GrabCut], a następnie operacje morfologiczne (otwarcie + domknięcie)
+        i wybór największej składowej spójnej.
+\end{itemize}
+% TODO: wstawić 1 rysunek "przed/po" + maskę (viz.show_pair / show_mask_overlay).
+
+% ============================================================ %
+\section{Ekstrakcja cech}
+% ============================================================ %
+Wyznaczamy trzy komplementarne rodziny cech (moduł \texttt{features}); każda ma
+czytelną listę nazw ułatwiającą analizę ważności cech.
+\begin{itemize}\itemsep1pt
+  \item \textbf{Tekstura (macierz GLCM).} Po kwantyzacji do \num{32} poziomów
+        liczymy GLCM dla odległości $d\in\{1,3\}$ i kątów
+        $\{0,45,90,135\}^\circ$, a z niej deskryptory Haralicka
+        (\emph{contrast, dissimilarity, homogeneity, energy, correlation, ASM})
+        oraz entropię --- łącznie \num{56} cech.
+  \item \textbf{Cechy koloru.} Średnia, odchylenie i skośność dla kanałów RGB
+        oraz HSV liczone na obszarze obiektu (\num{18} cech).
+  \item \textbf{Deskryptory kształtu.} Z największego konturu: pole, obwód,
+        zwartość, mimośród, \emph{extent}, średnica równoważna, bbox oraz
+        statystyki promieni (\num{11} cech).
+\end{itemize}
+% TODO: które rodziny ostatecznie użyto (use=...) i dlaczego (np. rozkłady cech).
+% TODO: wstawić viz.plot_feature_distributions dla 3-4 najbardziej różnicujących cech.
+
+% ============================================================ %
+\section{Klasyfikacja i dobór parametrów}
+% ============================================================ %
+Każdy model to potok \texttt{StandardScaler} $+$ klasyfikator (skalowanie uczone
+tylko na foldzie treningowym, bez wycieku informacji). Porównujemy klasyfikatory
+klasyczne: \textbf{SVM} i \textbf{drzewo decyzyjne} (wymagane w zadaniu) oraz
+baseline'y: las losowy, kNN i regresję logistyczną.
+
+Hiperparametry dobrano metodą \texttt{GridSearchCV} z walidacją krzyżową
+(\emph{stratified $k$-fold}, metryka \texttt{f1\_macro}) na zbiorze
+treningowo-walidacyjnym. % TODO: podać finalne siatki i najlepsze parametry.
+Przeszukiwano m.in. $C$, $\gamma$ i jądro dla SVM oraz głębokość i
+\texttt{min\_samples\_leaf} dla drzewa.
+
+% ============================================================ %
+\section{Wyniki i krytyczna analiza}
+% ============================================================ %
+Końcową ocenę przeprowadzono \emph{raz}, na wydzielonym zbiorze testowym.
+Tabela~\ref{tab:wyniki} zestawia metryki; raportujemy średnie makro
+(traktują klasy równo) oraz ważone.
+
+\begin{table}[h]
+  \centering\small
+  \caption{Metryki na zbiorze testowym. % TODO: uzupełnić liczbami z metrics.compare_models
+  }
+  \label{tab:wyniki}
+  \begin{tabular}{lcccc}
+    \toprule
+    Model & Accuracy & Precision\textsubscript{macro} & Recall\textsubscript{macro} & F1\textsubscript{macro} \\
+    \midrule
+    SVM              & -- & -- & -- & -- \\
+    Drzewo decyzyjne & -- & -- & -- & -- \\
+    Las losowy       & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  % TODO: viz.plot_confusion_matrix(...) -> fig.savefig("figures/confusion.png")
+  \fbox{\parbox[c][2.6cm][c]{0.5\linewidth}{\centering\small
+    [Rys.~--- macierz pomyłek najlepszego modelu]}}
+  \caption{Macierz pomyłek najlepszego klasyfikatora na zbiorze testowym.}
+  \label{fig:cm}
+\end{figure}
+
+\textbf{Analiza.} % TODO: napisać autorskie wnioski (najważniejsza część oceny):
+% - która rodzina cech daje największy wkład (feature importance / rozkłady)?
+% - które klasy są mylone i dlaczego (off-diagonal macierzy pomyłek)?
+% - rozbieżność accuracy vs F1_macro przy niezbalansowanych klasach?
+% - wpływ preprocessingu/segmentacji na wynik (ablacja)?
+[do uzupełnienia po eksperymentach]
+
+% ============================================================ %
+\section{Wnioski}
+% ============================================================ %
+% TODO: 3-5 zdań podsumowania: najlepsza konfiguracja, ograniczenia, co dalej.
+[do uzupełnienia]
+
+% ============================================================ %
+\begin{thebibliography}{9}
+\small
+\bibitem{haralick} R.~M. Haralick, K.~Shanmugam, I.~Dinstein,
+  \emph{Textural Features for Image Classification}, IEEE TSMC, 1973.
+\bibitem{skimage} S.~van der Walt i in.,
+  \emph{scikit-image: image processing in Python}, PeerJ, 2014.
+\bibitem{sklearn} F.~Pedregosa i in.,
+  \emph{Scikit-learn: Machine Learning in Python}, JMLR, 2011.
+\bibitem{opencv} G.~Bradski, \emph{The OpenCV Library}, Dr.~Dobb's Journal, 2000.
+% TODO: dodać źródło zbioru danych (np. PlantVillage) oraz pozostałe odnośniki.
+\end{thebibliography}
+
+\end{document}

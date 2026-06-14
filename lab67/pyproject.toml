@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cvproject"
+version = "0.1.0"
+description = "Classical image classification pipeline (CV AGH final project, lab67)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Hubert Miklas" }]
+license = { text = "MIT" }
+
+dependencies = [
+    "numpy>=1.24.0",
+    "opencv-python>=4.8.0",
+    "matplotlib>=3.7.0",
+    "scikit-image>=0.21.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
+    "pillow>=10.0.0",
+    "tqdm>=4.65.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.25.0",
+    "notebook>=7.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
