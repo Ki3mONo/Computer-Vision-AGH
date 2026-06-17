@@ -52,8 +52,8 @@ testowym. Pracujemy na dwóch zbiorach zawartych w poleceniu. Pierwszy zawiera p
 \begin{figure}[htp]
     \centering
     \includegraphics[width=0.7\linewidth]{apple_tomato.png}
-    \caption{Przykład danych treningowych do klasyfikacji pomidorów i jabłek}
-    \label{fig:wireshark}
+    \caption{Przykład danych treningowych do klasyfikacji pomidorów i jabłek.}
+    \label{fig:dataset}
 \end{figure}
 
 % ============================================================ %
@@ -89,7 +89,7 @@ w~przestrzeni HSV: maskę obiektu tworzą piksele o odcieniu w zakresie
 czerwieni/pomarańczu (z dwóch przedziałów, bo czerwień zawija się wokół $H=0$).
 Progowanie globalne Otsu, oparte na jasności, zawodziło na zdjęciach
 z~kolorowym lub zielonym tłem (np.\ pomidory na krzaku), dlatego wybraliśmy
-segmentację po kolorze. Uzyskaną maskę binarną czyścimy operacjami
+segmentację po kolorze (por.\ Rys.~\ref{fig:seg}). Uzyskaną maskę binarną czyścimy operacjami
 morfologicznymi: otwarcie eliptycznym jądrem $5{\times}5$ usuwa małe fałszywe
 plamy, a domknięcie tym samym jądrem uszczelnia dziury wewnątrz obiektu. Na
 koniec zachowywana jest wyłącznie największa składowa spójna, co eliminuje
@@ -101,7 +101,15 @@ oderwane fragmenty tła.
     \caption{Przykład łańcucha preprocessingu: oryginał (lewo),
            obraz po korekcji kontrastu i balansu bieli (środek),
            maska segmentacji (prawo).}
-    \label{fig:wireshark}
+    \label{fig:preproc}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\linewidth]{segmentation.png}
+    \caption{Porównanie segmentacji: oryginał, maska Otsu (rozpada się na
+             kolorowym/zielonym tle) oraz maska HSV (trzyma kształt owocu).}
+    \label{fig:seg}
 \end{figure}
 
 \end{itemize}
@@ -204,18 +212,44 @@ Końcową ocenę przeprowadzono \emph{raz}, na wydzielonym zbiorze testowym
 0,810 -- znacznie powyżej poziomu bazowego klasy większościowej (0,557). Klasy
 są prawie zbalansowane (54/43), więc średnie makro i ważone są zbliżone. Jabłka
 rozpoznawane są lepiej (czułość 0,87) niż pomidory (0,74); w macierzy pomyłek
-model bierze 11 pomidorów za jabłka i 7 jabłek za pomidory.
+(Rys.~\ref{fig:conf}) model bierze 11 pomidorów za jabłka i 7 jabłek za pomidory.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.42\linewidth}
+    \centering\includegraphics[width=\linewidth]{confusion.png}
+    \caption{Macierz pomyłek (kNN).}\label{fig:conf}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.55\linewidth}
+    \centering\includegraphics[width=\linewidth]{feat_importance.png}
+    \caption{Ważność cech wg rodziny.}\label{fig:imp}
+  \end{subfigure}
+  \caption{Najlepszy model i wkład poszczególnych rodzin cech.}
+\end{figure}
 
 Aby sprawdzić, które cechy realnie działają, policzyliśmy ważność cech
 (\textit{Random Forest}) oraz ablację rodzin (ten sam klasyfikator SVM i
 walidacja krzyżowa, zmieniany tylko zestaw cech). Oba ujęcia są zgodne: najwięcej
-wnosi \textbf{tekstura} (ważność GLCM 0,45; samodzielnie najlepsza rodzina,
-$F_1$\,0,757), a~druga jest \textbf{barwa} (0,26) -- zwłaszcza histogram odcienia
-i kanał $b^*$ z~Lab. Kształt (Zernike, Fourier, Hu, geometria) wnosi najmniej:
-oba owoce są podobnie okrągłe. Pełny zestaw cech ($F_1$\,0,785) bije każdą
-pojedynczą rodzinę, a maska HSV daje lepszy wynik niż Otsu (0,747 vs 0,738);
-rzut PCA pokazuje silne nakładanie się klas, ograniczające skuteczność cech
-klasycznych.
+wnosi \textbf{tekstura} (ważność GLCM 0,45 -- Rys.~\ref{fig:imp}; samodzielnie
+najlepsza rodzina, $F_1$\,0,757), a~druga jest \textbf{barwa} (0,26) -- zwłaszcza
+histogram odcienia i kanał $b^*$ z~Lab. Kształt (Zernike, Fourier, Hu, geometria)
+wnosi najmniej: oba owoce są podobnie okrągłe. Pełny zestaw cech bije każdą
+pojedynczą rodzinę (Rys.~\ref{fig:abl}; $F_1$\,0,785), a maska HSV daje lepszy
+wynik niż Otsu (0,747 vs 0,738); rzut PCA (Rys.~\ref{fig:pca}) pokazuje silne
+nakładanie się klas, ograniczające skuteczność cech klasycznych.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.52\linewidth}
+    \centering\includegraphics[width=\linewidth]{ablation.png}
+    \caption{Ablacja rodzin cech (SVM, CV).}\label{fig:abl}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.44\linewidth}
+    \centering\includegraphics[width=\linewidth]{pca.png}
+    \caption{Rzut PCA cech treningowych.}\label{fig:pca}
+  \end{subfigure}
+  \caption{Analiza cech: ablacja rodzin oraz rozkład klas w 2D (PCA).}
+\end{figure}
 
 % ============================================================ %
 \section{Wnioski}

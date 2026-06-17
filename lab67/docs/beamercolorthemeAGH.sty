@@ -1,0 +1,86 @@
+\ProvidesPackage{beamercolorthemeAGH}[\filecolordate\space v\filecolorversion\space The 'AGH' color theme for the Beamer class]
+\DeclareOptionBeamer{dark}{
+    \ifthenelse{\equal{#1}{}}            
+    {
+        \def\AGH@darknesslevel{50}       
+    }
+    {
+        \def\AGH@darknesslevel{#1}       
+    }
+    \ifthenelse{\AGH@darknesslevel < 50}
+    {
+        \pgfmathsetmacro{\AGH@graylevel}{100 - \AGH@darknesslevel}
+    }
+    {
+        \pgfmathsetmacro{\AGH@graylevel}{\AGH@darknesslevel}
+    }
+    \pgfmathsetmacro{\AGH@blockbodydarknesslevel}{\AGH@darknesslevel + 10}
+}
+\ProcessOptionsBeamer
+\mode<presentation>
+
+\definecolor{AGH@black}{RGB}{30,30,30}
+\definecolor{AGH@red}{RGB}{167,25,48}
+\definecolor{AGH@green}{RGB}{0,105,60}
+\definecolor{ced1c24}{RGB}{237,28,36}
+\definecolor{c672a8d}{RGB}{103,42,141}
+
+\ifAGH@dark%
+    \colorlet{AGH@white}{white!90}
+    \colorlet{AGH@main}{AGH@black!\AGH@darknesslevel}
+    \colorlet{AGH@gray}{gray!\AGH@graylevel}
+    \definecolor{c77787b}{RGB}{255,255,255}
+\else
+    \definecolor{AGH@white}{RGB}{255,255,255}
+    \colorlet{AGH@main}{AGH@white}
+    \colorlet{AGH@gray}{gray}
+    \definecolor{c77787b}{RGB}{119,120,123}
+\fi
+\setbeamercolor{sidebar}{parent=palette primary}
+\setbeamercolor{title in sidebar}{fg=AGH@white}
+\setbeamercolor{section in sidebar}{fg=AGH@green,bg=AGH@white}
+\setbeamercolor{section in sidebar shaded}{fg=AGH@white}
+\setbeamercolor{subsection in sidebar}{fg=AGH@green,bg=AGH@white}
+\setbeamercolor{subsection in sidebar shaded}{fg=AGH@white}
+\ifthenelse{\not\equal{\AGH@outertheme}{split} \AND \not\equal{\AGH@outertheme}{shadow}}
+{
+    \setbeamercolor{section in head/foot}{fg=AGH@white}
+}{}
+\setbeamercolor{palette primary}{fg=AGH@white,bg=AGH@red}
+\setbeamercolor{palette secondary}{fg=AGH@white,bg=AGH@black}
+\setbeamercolor{palette tertiary}{fg=AGH@white,bg=AGH@green}
+\setbeamercolor{structure}{fg=AGH@green,bg=AGH@main}
+\setbeamercolor{item}{fg=AGH@green!90,bg=AGH@main}
+\setbeamercolor{background canvas}{bg=AGH@main}
+\setbeamercolor{titlelike}{fg=AGH@black,bg=AGH@white}
+\ifAGH@dark%
+    \setbeamercolor{navigation symbols}{fg=AGH@white, bg=AGH@green}
+    \setbeamercolor{bibliography entry author}{fg=AGH@green,bg=blue!90!AGH@black}
+    \setbeamercolor{institute}{fg=AGH@white,bg=AGH@main}
+    \setbeamercolor{author}{fg=AGH@white,bg=AGH@main}
+    \setbeamercolor{date}{fg=AGH@white,bg=AGH@main}
+    \setbeamercolor{normal text}{fg=AGH@white,bg=AGH@main}
+    \setbeamercolor{block title}{fg=AGH@black,bg=normal text.fg!60}
+    \setbeamercolor{block body}{fg=AGH@white,bg=AGH@black!\AGH@blockbodydarknesslevel}
+    \setbeamercolor{block title alerted}{fg=alerted text.fg,bg=alerted text.fg!10}
+    \setbeamercolor{block body alerted}{bg=AGH@red!\AGH@blockbodydarknesslevel}
+    \setbeamercolor{block title example}{fg=example text.fg,bg=example text.fg!10}
+    \setbeamercolor{block body example}{bg=AGH@green!\AGH@blockbodydarknesslevel}
+\else
+    \ifthenelse{\not\equal{\AGH@outertheme}{sidebar}}
+    {
+        \setbeamercolor{frametitle}{parent=palette secondary}
+    }
+    {}
+    \setbeamercolor{title}{parent=palette secondary}
+    \setbeamercolor{part title}{parent=palette secondary}
+    \setbeamercolor{navigation symbols}{fg=AGH@black, bg=AGH@green}
+    \setbeamercolor{bibliography entry author}{use=structure.fg=fg.stucture,bg=blue!50!AGH@white}
+    \setbeamercolor{block title}{fg=AGH@main,bg=AGH@black!80!bg}
+    \setbeamercolor{block body}{fg=normal text.fg,bg=normal text.fg!10!bg}
+    \setbeamercolor{block title alerted}{fg=AGH@main,bg=AGH@red!80!bg}
+    \setbeamercolor{block body alerted}{fg=normal text.fg,bg=alerted text.fg!10!bg}
+    \setbeamercolor{block title example}{fg=AGH@main,bg=AGH@green!80!bg}
+    \setbeamercolor{block body example}{fg=normal text.fg,bg=example text.fg!10!bg}
+\fi
+\mode<all>
