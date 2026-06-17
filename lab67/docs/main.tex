@@ -23,7 +23,6 @@
 % Ścieżka do rysunków eksportowanych z notatnika (viz.* zwraca obiekt Figure,
 % który można zapisać przez fig.savefig("docs/figures/...")).
 \graphicspath{{figures/}}
-
 \title{\vspace{-1.5em}Klasyfikacja obrazów metodami klasycznej wizji komputerowej}
 
 \author{
@@ -254,31 +253,85 @@ nakładanie się klas, ograniczające skuteczność cech klasycznych.
 % ============================================================ %
 \section{Wnioski}
 % ============================================================ %
-Klasyczny potok (segmentacja HSV, 203 cechy z trzech grup, strojenie
+Podstawowe działanie (segmentacja HSV, 203 cechy z trzech grup, strojenie
 \texttt{GridSearchCV}) sklasyfikował jabłka i pomidory z accuracy 0,814 i
-$F_1$\textsubscript{makro} 0,810, wyraźnie powyżej poziomu bazowego 0,557.
-Najwięcej wniosła tekstura, wsparta kolorem; kształt okazał się mało przydatny
-przy obiektach o zbliżonej, okrągłej sylwetce. Głównym ograniczeniem jest sam
-zbiór -- obie klasy bywają czerwone i okrągłe, a część zdjęć to kiście lub
-owoce pokrojone, co obniża górną granicę skuteczności metod klasycznych.
-
+$F_1$\textsubscript{makro} 0,810 -- o ponad 25 punktów procentowych powyżej
+poziomu bazowego (0,557). Zbiór jest przy tym wyjątkowo niewdzięczny: klasy
+silnie się nakładają (oba owoce bywają czerwone i okrągłe), a część zdjęć to
+kiście, owoce pokrojone czy przypadki o wątpliwych etykietach Rys. \ref{fig:ogor}. W tym kontekście
+\textbf{81,4\% accuracy traktujemy jako wynik bardzo dobry} -- bliski
+praktycznej granicy osiągalnej metodami klasycznymi na tych danych. Najwięcej
+wniosła tekstura, wsparta kolorem; kształt okazał się mało przydatny przy
+obiektach o zbliżonej, okrągłej sylwetce.
+\begin{figure}[htbp]
+    \centering
+    
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{japko.png}
+        \caption{Czapetka samarangijska \cite{Czapetka} -- \textit{ang. Java apple \cite{java}}}
+        \label{fig:gruchanie}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{owad.png}
+        \caption{Owad - pomidorowy}
+        \label{fig:placeholder_owad}
+    \end{subfigure}
+    \hfill
+    % \begin{subfigure}[b]{0.24\linewidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{joe.png}
+    %     \caption{Joe - Fandom wiki}
+    %     \label{fig:joe-fandom}
+    % \end{subfigure}
+    % \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{whois.png}
+        \caption{Who is Joe? \cite{Joe}}
+        \label{fig:placeholder_jan}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{ogor.jpeg}
+        \caption{Ogór \cite{Random}}
+        \label{fig:ogor}
+    \end{subfigure}
+    
+    \caption{Wątpliwe etykiety zbioru.}
+    \label{fig:main_figure}
+\end{figure}
 % ============================================================ %
 \begin{thebibliography}{9}
 \small
+\bibitem{otsu} N.~Otsu, \emph{A Threshold Selection Method from Gray-Level
+  Histograms}, IEEE Trans. Systems, Man, and Cybernetics, vol.~9, no.~1, 1979.
+\bibitem{clahe} K.~Zuiderveld, \emph{Contrast Limited Adaptive Histogram
+  Equalization}, w: Graphics Gems IV, Academic Press, 1994.
 \bibitem{haralick} R.~M. Haralick, K.~Shanmugam, I.~Dinstein,
-  \emph{Textural Features for Image Classification}, IEEE TSMC, 1973.
-\bibitem{skimage} S.~van der Walt i in.,
-  \emph{scikit-image: image processing in Python}, PeerJ, 2014.
-\bibitem{sklearn} F.~Pedregosa i in.,
-  \emph{Scikit-learn: Machine Learning in Python}, JMLR, 2011.
-\bibitem{opencv} G.~Bradski, \emph{The OpenCV Library}, Dr.~Dobb's Journal, 2000.
-\bibitem{lbp} T.~Ojala, M.~Pietikäinen, T.~Mäenpää, \emph{Multiresolution
+  \emph{Textural Features for Image Classification}, IEEE Trans. SMC, 1973.
+\bibitem{lbp} T.~Ojala, M.~Pietik\"ainen, T.~M\"aenp\"a\"a, \emph{Multiresolution
   Gray-Scale and Rotation Invariant Texture Classification with Local Binary
-  Patterns}, IEEE TPAMI, 2002.
+  Patterns}, IEEE TPAMI, vol.~24, no.~7, 2002.
 \bibitem{hu} M.-K. Hu, \emph{Visual Pattern Recognition by Moment Invariants},
-  IRE Trans. Information Theory, 1962.
+  IRE Trans. Information Theory, vol.~8, no.~2, 1962.
 \bibitem{zernike} A.~Khotanzad, Y.~H. Hong, \emph{Invariant Image Recognition
-  by Zernike Moments}, IEEE TPAMI, 1990.
+  by Zernike Moments}, IEEE TPAMI, vol.~12, no.~5, 1990.
+\bibitem{fourier} C.~T. Zahn, R.~Z. Roskies, \emph{Fourier Descriptors for
+  Plane Closed Curves}, IEEE Trans. Computers, vol.~C-21, no.~3, 1972.
+\bibitem{opencv} G.~Bradski, \emph{The OpenCV Library}, Dr.~Dobb's Journal of
+  Software Tools, 2000.
+\bibitem{skimage} S.~van der Walt i in., \emph{scikit-image: image processing
+  in Python}, PeerJ 2:e453, 2014.
+\bibitem{sklearn} F.~Pedregosa i in., \emph{Scikit-learn: Machine Learning in
+  Python}, JMLR, vol.~12, 2011.
+\bibitem{Joe} https://veggietales.fandom.com/wiki/Joe
+\bibitem{Random} https://www.youtube.com/watch?v=j4Ph02gzqmY
+\bibitem{Czapetka} https://pl.wikipedia.org/wiki/Czapetka\_samarangijska
+\bibitem{java} https://en.wikipedia.org/wiki/Syzygium\_samarangense
 \end{thebibliography}
 
 \end{document}

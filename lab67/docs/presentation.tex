@@ -124,11 +124,11 @@
 % ============================================================ %
 \begin{frame}{Cel projektu}
     \textbf{Zadanie:} klasyfikacja obrazów \emph{wyłącznie} metodami klasycznej
-    wizji komputerowej i uczenia maszynowego --- bez sieci neuronowych.
+    wizji komputerowej i uczenia maszynowego -- bez sieci neuronowych.
     \pause
     \vspace{0.5cm}
 
-    \textbf{Potok przetwarzania:}
+    \textbf{Pipeline:}
     \begin{itemize}
         \item wczytanie danych,
         \item preprocessing (czyszczenie, segmentacja obiektu od tła),
@@ -164,18 +164,18 @@
 % ============================================================ %
 \section{Preprocessing}
 % ============================================================ %
-\begin{frame}{Łańcuch preprocessingu}
+\begin{frame}{Działanie preprocessingu}
     \begin{itemize}
-        \item \textbf{Usunięcie artefaktów} --- filtr medianowy (szum „sól i
+        \item \textbf{Usunięcie artefaktów} -- filtr medianowy (szum „sól i
               pieprz", bloki JPEG; zachowuje krawędzie lepiej niż rozmycie Gaussa).
         \pause
-        \item \textbf{Balans bieli} --- metoda \emph{gray-world}, redukcja
+        \item \textbf{Balans bieli} -- metoda \emph{gray-world}, redukcja
               dominującej barwy.
         \pause
-        \item \textbf{Kontrast} --- CLAHE na kanale $L$ (LAB); barwa i nasycenie
+        \item \textbf{Kontrast} -- CLAHE na kanale $L$ (LAB); barwa i nasycenie
               pozostają nietknięte.
         \pause
-        \item \textbf{Segmentacja} --- progowanie w HSV + morfologia (otwarcie,
+        \item \textbf{Segmentacja} -- progowanie w HSV + morfologia (otwarcie,
               domknięcie) + największa składowa spójna.
     \end{itemize}
     \vspace{0.2cm}
@@ -186,9 +186,9 @@
 
 \begin{frame}{Dlaczego HSV, a nie Otsu?}
     \begin{itemize}
-        \item Otsu progu­je po \textbf{jasności} --- rozpada się, gdy tło jest
+        \item Otsu progu­je po \textbf{jasności} -- rozpada się, gdy tło jest
               kolorowe lub zielone (np. pomidory na krzaku).
-        \item HSV progu­je po \textbf{kolorze} (ciepłe barwy owoców) --- trzyma
+        \item HSV progu­je po \textbf{kolorze} (ciepłe barwy owoców) -- trzyma
               kształt owocu niezależnie od tła.
     \end{itemize}
     \vspace{0.5cm}
@@ -199,7 +199,7 @@
     \end{block}
 \end{frame}
 
-\begin{frame}{Segmentacja --- Otsu vs HSV}
+\begin{frame}{Segmentacja -- Otsu vs HSV}
     \centering
     \includegraphics[width=0.7\linewidth]{segmentation.png}
 
@@ -211,14 +211,14 @@
 % ============================================================ %
 \section{Ekstrakcja cech}
 % ============================================================ %
-\begin{frame}{Cechy --- 203 wartości na obraz}
+\begin{frame}{Cechy -- 203 wartości na obraz}
     Liczone na masce obiektu, w trzech komplementarnych grupach. Preferujemy
     deskryptory niezmiennicze względem skali i obrotu.
     \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Tekstura (66):} macierz GLCM --- deskryptory Haralicka
+        \item \textbf{Tekstura (66):} macierz GLCM -- deskryptory Haralicka
               (kontrast, niepodobieństwo, jednorodność, energia, korelacja, ASM,
-              entropia) --- oraz histogram lokalnych wzorców binarnych (LBP).
+              entropia) -- oraz histogram lokalnych wzorców binarnych (LBP).
         \pause
         \item \textbf{Kolor (75):} dla RGB/HSV/Lab statystyki (średnia, odchylenie,
               skośność, mediana, kurtoza, kwartyle) + histogram odcienia.
@@ -236,7 +236,7 @@
     decyzyjne, las losowy, $k$-NN oraz regresja logistyczna.
     \vspace{0.4cm}
     \begin{itemize}
-        \item Każdy w potoku \texttt{StandardScaler} + klasyfikator --- skalowanie
+        \item Każdy w potoku \texttt{StandardScaler} + klasyfikator -- skalowanie
               uczone tylko na foldzie treningowym (brak wycieku informacji).
         \pause
         \item Hiperparametry: \texttt{GridSearchCV}, walidacja krzyżowa
@@ -270,7 +270,7 @@
     \pause
 
     \normalsize Najlepszy \textbf{kNN}: accuracy \textbf{0,814}, $F_1$ makro
-    \textbf{0,810} --- znacznie powyżej poziomu bazowego klasy większościowej
+    \textbf{0,810} -- znacznie powyżej poziomu bazowego klasy większościowej
     ($0{,}557$).
 \end{frame}
 
@@ -293,7 +293,7 @@
             \begin{itemize}
                 \item Jabłka: czułość $0{,}87$ (47/54).
                 \item Pomidory: czułość $0{,}74$ (32/43).
-                \item Błędy idą w obie strony --- klasy mocno się nakładają (widać
+                \item Błędy idą w obie strony -- klasy mocno się nakładają (widać
                       to też na rzucie PCA).
             \end{itemize}
         \end{column}
@@ -326,11 +326,11 @@
     \vspace{0.3cm}
     \pause
     \centering
-    \emph{Tekstura niesie najwięcej, kolor jest drugi, kształt mało --- a pełny
+    \emph{Tekstura niesie najwięcej, kolor jest drugi, kształt mało -- a pełny
     zestaw cech wygrywa.}
 \end{frame}
 
-\begin{frame}{Wkład rodzin cech --- wykresy}
+\begin{frame}{Wkład rodzin cech -- wykresy}
     \begin{columns}[c]
         \begin{column}{0.5\textwidth}
             \centering\includegraphics[width=\linewidth]{feat_importance.png}
@@ -343,12 +343,12 @@
     \centering {\footnotesize Tekstura i kolor dominują; pełny zestaw cech wygrywa.}
 \end{frame}
 
-\begin{frame}{Dlaczego to trudne --- rzut PCA}
+\begin{frame}{Dlaczego to trudne -- rzut PCA}
     \centering
     \includegraphics[width=0.56\linewidth]{pca.png}
 
     \vspace{0.2cm}
-    {\footnotesize Klasy mocno się nakładają --- to ogranicza górną granicę metod
+    {\footnotesize Klasy mocno się nakładają -- to ogranicza górną granicę metod
     klasycznych.}
 \end{frame}
 
@@ -361,7 +361,7 @@
               $0{,}814$ i $F_1$ makro $0{,}810$ (baseline $0{,}557$).
         \pause
         \item Najwięcej wnoszą \textbf{tekstura} (gładki, błyszczący pomidor vs
-              matowe jabłko) i \textbf{kolor}; kształt mało --- oba owoce są okrągłe.
+              matowe jabłko) i \textbf{kolor}; kształt mało -- oba owoce są okrągłe.
         \pause
         \item \textbf{Segmentacja po kolorze (HSV)} bije Otsu i jest kluczowa dla
               jakości cech koloru i kształtu.
@@ -369,6 +369,35 @@
         \item Ograniczeniem jest sam zbiór: nakładające się klasy, kiście, owoce
               pokrojone i różne tła.
     \end{itemize}
+\end{frame}
+
+\begin{frame}{Dygresja: czy ten zbiór jest na pewno poważny?}
+    \centering Cztery autentyczne „perełki” ze zbioru:
+    \vspace{0.15cm}
+    \begin{columns}[T]
+        \begin{column}{0.24\textwidth}\centering
+            \includegraphics[width=\linewidth,height=2.7cm,keepaspectratio]{grucha.png}\\
+            {\scriptsize Czapetka (\emph{java apple})}
+        \end{column}
+        \begin{column}{0.24\textwidth}\centering
+            \includegraphics[width=\linewidth,height=2.7cm,keepaspectratio]{owad.png}\\
+            {\scriptsize Owad jako „pomidor”?}
+        \end{column}
+        \begin{column}{0.24\textwidth}\centering
+            \includegraphics[width=\linewidth,height=2.7cm,keepaspectratio]{whois.png}\\
+            {\scriptsize \href{https://veggietales.fandom.com/wiki/Joe}{Who is Joe?}}
+        \end{column}
+        \begin{column}{0.24\textwidth}\centering
+            \includegraphics[width=\linewidth,height=2.7cm,keepaspectratio]{ogor.jpeg}\\
+            {\scriptsize \href{https://www.youtube.com/watch?v=j4Ph02gzqmY}{Ogór}}
+        \end{column}
+    \end{columns}
+    \vspace{0.2cm}
+    \pause
+    \begin{block}{Pytanie pozostawimy otwartym}
+        Skoro w klasie \emph{apple} mieści się nawet czapetka (\emph{java apple}),
+        to czemu w zbiorze nie ma \emph{pineapple}, skoro też ma „apple” w nazwie?
+    \end{block}
 \end{frame}
 
 \begin{frame}{}
