@@ -2,21 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-# --------------------------------------------------------------------------- #
-# Texture — GLCM (gray-level co-occurrence matrix; see lab4)
-# --------------------------------------------------------------------------- #
-LEVELS = 32  # gray levels after quantisation (32 keeps the GLCM dense yet cheap)
-DISTANCES = [1, 3]  # pixel offsets: 1 = fine texture, 3 = coarser
-ANGLES = [0, np.pi / 4, np.pi / 2, 3 * np.pi / 4]  # 0/45/90/135 deg
+LEVELS = 32
+DISTANCES = [1, 3]
+ANGLES = [0, np.pi / 4, np.pi / 2, 3 * np.pi / 4]  # 0/45/90/135
 PROPS = ["contrast", "dissimilarity", "homogeneity", "energy", "correlation", "ASM"]
 
 
 def quantize(img: np.ndarray, levels: int = LEVELS) -> np.ndarray:
-    """
-    Reduce a grayscale image to ``levels`` gray levels for the GLCM.
-
-    Fewer levels -> smaller, denser GLCM (more samples per bin, less noise).
-    """
     import cv2
 
     if img.ndim == 3:
@@ -32,13 +24,6 @@ def glcm_features(
     distances: list = DISTANCES,
     angles: list = ANGLES,
 ) -> np.ndarray:
-    """
-    Haralick texture features from the gray-level co-occurrence matrix.
-
-    Returns a length-56 vector: the 6 :data:`PROPS` plus entropy, each over every
-    (distance, angle) plane. Texture separates the leaf classes well (blight
-    lesions vs healthy tissue) — the "texture matrices" the TASK suggests.
-    """
     from skimage.feature import graycomatrix, graycoprops
 
     q = quantize(img, levels)
@@ -47,20 +32,12 @@ def glcm_features(
         levels=levels, symmetric=True, normed=True,
     )
     feats = [graycoprops(glcm, prop).ravel() for prop in PROPS]
-    # entropy per (distance, angle) plane — not provided by graycoprops
     entropy = -np.sum(glcm * np.log2(glcm + 1e-12), axis=(0, 1)).ravel()
     feats.append(entropy)
     return np.concatenate(feats)
 
 
 def _build_glcm_names() -> list[str]:
-    """
-    Names aligned with :func:`glcm_features` output order.
-
-    Order MUST match step 3-4 above: outer loop over ``PROPS + ["entropy"]``,
-    then over ``DISTANCES``, then over angles (0/45/90/135 deg). Emit
-    ``f"{prop}_d{d}_a{deg}"`` -> e.g. ``"contrast_d1_a0"``, ``"entropy_d3_a135"``.
-    """
     angle_degs = [int(round(np.degrees(a))) for a in ANGLES]
     names: list[str] = []
     for prop in PROPS + ["entropy"]:
@@ -70,44 +47,29 @@ def _build_glcm_names() -> list[str]:
     return names
 
 
-# Built from the constants above so it always matches glcm_features' output order.
 GLCM_FEATURE_NAMES: list[str] = _build_glcm_names()
 
 
-# --------------------------------------------------------------------------- #
-# Colour statistics
-# --------------------------------------------------------------------------- #
 def color_features(img: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
-    """
-    Per-channel colour statistics (mean, std, skew) over the (masked) object.
-
-    Returns a length-18 vector: RGB then HSV, three stats per channel, matching
-    :data:`COLOR_FEATURE_NAMES`. With a ``mask`` only foreground pixels are used so
-    the black background doesn't skew the statistics. Colour is the most
-    discriminative cue for apples-vs-tomatoes and a strong one for blight.
-    Grayscale input falls back to single-channel stats tiled across the 6 slots.
-    """
     import cv2
     from scipy.stats import skew
 
     n_out = len(COLOR_FEATURE_NAMES)
 
     def _stats(ch: np.ndarray) -> list[float]:
-        # skew is undefined (NaN) when a channel is perfectly uniform -> use 0
         sk = 0.0 if ch.std() == 0 else float(skew(ch))
         return [float(ch.mean()), float(ch.std()), sk]
 
-    if img.ndim == 2:  # grayscale fallback: tile gray stats across all 6 channels
+    if img.ndim == 2:
         px = img[mask > 0] if mask is not None else img.ravel()
         if px.size == 0:
             return np.zeros(n_out)
         return np.tile(_stats(px.astype(np.float64)), n_out // 3)
 
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-    # stack the 6 channels (R,G,B,H,S,V) and select the pixel set once
-    stacked = np.concatenate([img, hsv], axis=2)  # (H, W, 6)
+    stacked = np.concatenate([img, hsv], axis=2)
     px = stacked[mask > 0] if mask is not None else stacked.reshape(-1, 6)
-    if px.size == 0:  # empty mask -> no foreground pixels
+    if px.size == 0:
         return np.zeros(n_out)
 
     feats: list[float] = []
@@ -123,28 +85,18 @@ COLOR_FEATURE_NAMES: list[str] = [
     for stat in ("mean", "std", "skew")
 ]
 
+
 def binarize(img: np.ndarray, threshold: int = 128) -> np.ndarray:
-    """
-    Binary mask of the object, ``uint8`` {0,255}, object == 255.
-    """
     import cv2
 
     g = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) if img.ndim == 3 else img
     _, b = cv2.threshold(g, threshold, 255, cv2.THRESH_BINARY)
-    if b.mean() > 127:  # lab5 convention: object must be the foreground (255)
+    if b.mean() > 127:
         b = 255 - b
     return b.astype(np.uint8)
 
 
 def shape_features(img: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
-    """
-    Geometric descriptors of the largest contour (the "shape descriptors" in TASK).
-
-    Returns a length-11 vector in :data:`SHAPE_FEATURE_NAMES` order, or zeros if no
-    contour is found. ``area``/``perimeter``/``bbox`` are scale-sensitive — fine
-    when images share a scale; the scale-invariant ones (compactness,
-    eccentricity, extent) are safer when resolutions are mixed.
-    """
     import cv2
 
     b = mask if mask is not None else binarize(img)
@@ -161,7 +113,7 @@ def shape_features(img: np.ndarray, mask: np.ndarray | None = None) -> np.ndarra
     extent = area / (w * h) if w * h > 0 else 0.0
     compactness = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0.0
 
-    if len(cnt) >= 5:  # fitEllipse needs >= 5 points
+    if len(cnt) >= 5:  # fitEllipse needs >=5 pts
         (_, (minor, major), _) = cv2.fitEllipse(cnt)
         eccentricity = (minor / major) if major > 0 else 0.0
     else:
@@ -187,19 +139,16 @@ SHAPE_FEATURE_NAMES: list[str] = [
     "compactness", "eccentricity", "max_radius", "min_radius", "mean_radius",
 ]
 
-# Optional extras — not part of the default ``use`` families, but ready to add.
+
 def hu_moments(img: np.ndarray, mask: np.ndarray | None = None) -> np.ndarray:
-    """7 log-scaled, rotation/scale/translation-invariant Hu moments."""
     import cv2
 
     b = mask if mask is not None else binarize(img)
     hu = cv2.HuMoments(cv2.moments((b > 0).astype(np.uint8) * 255)).ravel()
-    # log-transform to tame the huge dynamic range, keeping sign
     return -np.sign(hu) * np.log10(np.abs(hu) + 1e-30)
 
 
 def fourier_descriptor(img: np.ndarray, n_coeffs: int = 32) -> np.ndarray:
-    """Rotation/scale-normalised Fourier descriptors of the contour (see lab5)."""
     import cv2
 
     b = binarize(img)
@@ -208,21 +157,70 @@ def fourier_descriptor(img: np.ndarray, n_coeffs: int = 32) -> np.ndarray:
         return np.zeros(n_coeffs)
     cnt = max(contours, key=cv2.contourArea).reshape(-1, 2).astype(np.float64)
     z = cnt[:, 0] + 1j * cnt[:, 1]
-    coeffs = np.fft.fft(z)[1:]  # drop DC (translation)
+    coeffs = np.fft.fft(z)[1:]
     if np.abs(coeffs[0]) > 0:
-        coeffs = coeffs / np.abs(coeffs[0])  # scale/rotation normalisation
+        coeffs = coeffs / np.abs(coeffs[0])
     fd = np.abs(coeffs[:n_coeffs])
     if len(fd) < n_coeffs:
         fd = np.pad(fd, (0, n_coeffs - len(fd)))
     return fd
 
+
+HIST_BINS = 16
+HIST_FEATURE_NAMES: list[str] = [
+    f"hist_{ch}_{b}" for ch in ("h", "s", "v") for b in range(HIST_BINS)
+]
+
+
+def color_histogram(img: np.ndarray, mask: np.ndarray | None = None, bins: int = HIST_BINS) -> np.ndarray:
+    import cv2
+
+    if img.ndim == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    px = hsv[mask > 0] if mask is not None else hsv.reshape(-1, 3)
+    if px.size == 0:
+        return np.zeros(3 * bins)
+
+    ranges = ((0, 180), (0, 256), (0, 256))
+    out: list[np.ndarray] = []
+    for c in range(3):
+        h, _ = np.histogram(px[:, c], bins=bins, range=ranges[c])
+        h = h.astype(float)
+        total = h.sum()
+        if total > 0:
+            h /= total
+        out.append(h)
+    return np.concatenate(out)
+
+
+LBP_P = 8
+LBP_FEATURE_NAMES: list[str] = [f"lbp_{i}" for i in range(LBP_P + 2)]
+
+
+def lbp_features(img: np.ndarray, mask: np.ndarray | None = None, P: int = LBP_P, R: float = 1.0) -> np.ndarray:
+    import cv2
+    from skimage.feature import local_binary_pattern
+
+    g = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) if img.ndim == 3 else img
+    lbp = local_binary_pattern(g, P, R, method="uniform")
+    vals = lbp[mask > 0] if mask is not None else lbp.ravel()
+    if vals.size == 0:
+        return np.zeros(P + 2)
+    h, _ = np.histogram(vals, bins=P + 2, range=(0, P + 2))
+    h = h.astype(float)
+    total = h.sum()
+    if total > 0:
+        h /= total
+    return h
+
+
 def feature_names(use: tuple[str, ...] = ("glcm", "color", "shape")) -> list[str]:
-    """
-    Concatenated names for the selected families, in extraction order.
-    """
     families = {
         "glcm": GLCM_FEATURE_NAMES,
         "color": COLOR_FEATURE_NAMES,
+        "hist": HIST_FEATURE_NAMES,
+        "lbp": LBP_FEATURE_NAMES,
         "shape": SHAPE_FEATURE_NAMES,
     }
     names: list[str] = []
@@ -238,12 +236,11 @@ def extract_all(
     mask: np.ndarray | None = None,
     use: tuple[str, ...] = ("glcm", "color", "shape"),
 ) -> np.ndarray:
-    """
-    Concatenate the selected feature families for ONE image.
-    """
     extractors = {
         "glcm": lambda: glcm_features(img),
         "color": lambda: color_features(img, mask),
+        "hist": lambda: color_histogram(img, mask),
+        "lbp": lambda: lbp_features(img, mask),
         "shape": lambda: shape_features(img, mask),
     }
     parts: list[np.ndarray] = []
@@ -259,9 +256,6 @@ def build_feature_matrix(
     masks: list | None = None,
     use: tuple[str, ...] = ("glcm", "color", "shape"),
 ) -> tuple[np.ndarray, list[str]]:
-    """
-    Build the (n_samples, n_features) matrix for a list of images.
-    """
     from tqdm import tqdm
 
     rows: list[np.ndarray] = []

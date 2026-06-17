@@ -12,16 +12,14 @@ from cvproject import config, data, preprocessing, features, classification, met
 
 
 def main() -> int:
-    cfg = config.get_config("potato_simple")
+    cfg = config.get_config("apples_tomatoes")
     print(f"[1] dataset: {cfg['name']}  path-exists={cfg['abs_path'].exists()}")
 
-    # --- real load of the small dataset (also exercises case-insensitive glob) ---
-    X_imgs, y_str = data.load_dataset(cfg)
+    X_imgs, y_str = data.load_dataset(cfg, split="train")
     imgs = X_imgs[:6]
     print(f"[2] load_dataset: {len(X_imgs)} imgs, first shape={imgs[0].shape}, dtype={imgs[0].dtype}")
     assert imgs[0].ndim == 3 and imgs[0].dtype == np.uint8
 
-    # --- converters on a real image ---
     g = preprocessing.to_gray(imgs[0])
     q = features.quantize(imgs[0])
     b = features.binarize(imgs[0])
@@ -33,31 +31,25 @@ def main() -> int:
     assert g.ndim == 2 and q.max() <= 31 and set(np.unique(b)).issubset({0, 255})
     assert masked[0, 0].tolist() == [0, 0, 0]
 
-    # --- stratified split on real labels ---
     print(f"[4] classes={sorted(set(y_str))}, counts={[int((y_str==c).sum()) for c in sorted(set(y_str))]}")
     y, le = data.encode_labels(y_str)
 
-    # class-balanced subset (40/class) so the tiny demo has both labels
     idx = np.concatenate([np.where(y == c)[0][:40] for c in np.unique(y)])
     sub_imgs = [X_imgs[i] for i in idx]
     yy = y[idx]
 
-    # REAL preprocessing (segmentation mask per image) + REAL feature extraction
-    cfg_color = {"color": True}
     proc, masks = [], []
     for im in sub_imgs:
-        p, m = preprocessing.preprocess(im, cfg_color, segment_method="otsu")
+        p, m = preprocessing.preprocess(im, segment_method="otsu")
         proc.append(p)
         masks.append(m)
     X, names = features.build_feature_matrix(proc, masks=masks, use=("glcm", "color", "shape"))
-    print(f"[5] build_feature_matrix (real features): X={X.shape}, n_names={len(names)} "
+    print(f"[5] build_feature_matrix: X={X.shape}, n_names={len(names)} "
           f"(cols match={X.shape[1]==len(names)}, finite={np.isfinite(X).all()})")
     assert X.shape[1] == len(names) == 85 and np.isfinite(X).all()
 
-    # --- split + tune (train/val) + evaluate on the held-out test set ---
     s = data.make_splits(X, yy, val_size=0.2, test_size=0.2)
     models = classification.build_models()
-    # tune the two TASK-named models on the training set, then fit on train+val
     tuned = {}
     X_fit = np.vstack([s["X_train"], s["X_val"]])
     y_fit = np.concatenate([s["y_train"], s["y_val"]])
@@ -74,7 +66,7 @@ def main() -> int:
     print(f"[8] report (best={table.index[0]}):")
     print(metrics.report(s["y_test"], preds[table.index[0]], target_names=list(le.classes_)))
 
-    print("\nDRY-RUN OK — implemented plumbing chains end-to-end on real images.")
+    print("\nDRY-RUN OK")
     return 0
 
 

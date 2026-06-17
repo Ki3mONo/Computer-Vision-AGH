@@ -16,11 +16,10 @@ from cvproject import config, data, preprocessing, features, classification, met
 # config
 # --------------------------------------------------------------------------- #
 def test_get_config_resolves_and_defaults():
-    cfg = config.get_config("potato_simple")
-    assert cfg["name"] == "potato_simple"
-    assert cfg["abs_path"].name == "Task 1 - Simple"
+    cfg = config.get_config("apples_tomatoes")
+    assert cfg["name"] == "apples_tomatoes"
+    assert cfg["abs_path"].name == "apples_tomatoes"
     assert cfg["abs_path"].is_absolute()
-    # default uses ACTIVE
     assert config.get_config()["name"] == config.ACTIVE
 
 
@@ -35,8 +34,7 @@ def test_get_config_unknown_raises():
 def test_get_config_warns_on_missing_path(tmp_path=None):
     # Temporarily point a fake entry at a missing folder.
     config.DATASETS["__fake__"] = {
-        "path": "nope", "classes": {}, "presplit": False, "color": True,
-        "glob": "*.jpg", "description": "x",
+        "path": "nope", "classes": {}, "glob": "*.jpg", "description": "x",
     }
     try:
         with warnings.catch_warnings(record=True) as w:
@@ -326,12 +324,10 @@ def test_segment_foreground_finds_object():
 
 def test_preprocess_chains_and_returns_mask():
     img = _synthetic_object()
-    cfg = {"color": True}
-    out, mask = preprocessing.preprocess(img, cfg, segment_method="otsu")
+    out, mask = preprocessing.preprocess(img, segment_method="otsu")
     assert out.shape == img.shape
     assert mask is not None and set(np.unique(mask)).issubset({0, 255})
-    # without a segment step, mask is None
-    out2, mask2 = preprocessing.preprocess(img, cfg, steps=("enhance_contrast",))
+    out2, mask2 = preprocessing.preprocess(img, steps=("enhance_contrast",))
     assert mask2 is None
 
 
