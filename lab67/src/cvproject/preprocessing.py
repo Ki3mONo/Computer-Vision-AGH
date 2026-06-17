@@ -87,7 +87,7 @@ def _largest_component(mask: np.ndarray) -> np.ndarray:
 def segment_foreground(
     img: np.ndarray,
     method: str = "otsu",
-    hsv_target: str = "green",
+    hsv_target: str = "warm",
 ) -> np.ndarray:
     if method == "otsu":
         g = to_gray(img)

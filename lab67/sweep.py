@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from cvproject import config, data, preprocessing as pp, features as F, classification as C, metrics as M
 from cvproject.config import RNG
 
-ALL = ("glcm", "color", "hist", "lbp", "shape")
+ALL = ("glcm", "color", "huehist", "lbp", "shape", "hu", "fourier", "geom", "zernike")
 CLFS = ("svm", "decision_tree", "random_forest", "knn", "logreg")
 
 
@@ -84,11 +84,14 @@ def main():
 
     # ---- (a) feature-family ablation on hsv segmentation ----
     combos = [
-        ("glcm",), ("color",), ("hist",), ("lbp",), ("shape",),
-        ("color", "hist"), ("hist", "lbp"), ("glcm", "hist"),
-        ("glcm", "color", "shape"),            # original baseline
-        ("color", "hist", "glcm"),
-        ("glcm", "color", "hist", "lbp", "shape"),  # everything
+        ("glcm",), ("color",), ("huehist",), ("zernike",),
+        ("shape", "hu", "fourier", "geom"),          # all shape
+        ("glcm", "color"),
+        ("glcm", "color", "huehist"),
+        ("glcm", "color", "huehist", "lbp"),
+        ("color", "huehist", "shape", "hu", "fourier", "geom", "zernike"),  # no texture
+        ("glcm", "color", "shape"),                  # original baseline
+        ALL,                                          # everything
     ]
     rows = []
     for combo in combos:

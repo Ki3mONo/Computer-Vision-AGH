@@ -46,7 +46,7 @@ def main() -> int:
     X, names = features.build_feature_matrix(proc, masks=masks, use=("glcm", "color", "shape"))
     print(f"[5] build_feature_matrix: X={X.shape}, n_names={len(names)} "
           f"(cols match={X.shape[1]==len(names)}, finite={np.isfinite(X).all()})")
-    assert X.shape[1] == len(names) == 85 and np.isfinite(X).all()
+    assert X.shape[1] == len(names) and np.isfinite(X).all()
 
     s = data.make_splits(X, yy, val_size=0.2, test_size=0.2)
     models = classification.build_models()

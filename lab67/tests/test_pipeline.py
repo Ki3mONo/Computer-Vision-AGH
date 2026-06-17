@@ -155,9 +155,9 @@ def test_glcm_names_count_and_order():
 
 def test_feature_names_lengths_and_unknown():
     assert len(features.feature_names(("glcm",))) == 56
-    assert len(features.feature_names(("color",))) == 18
+    assert len(features.feature_names(("color",))) == 63
     assert len(features.feature_names(("shape",))) == 11
-    assert len(features.feature_names(("glcm", "color", "shape"))) == 85
+    assert len(features.feature_names(("glcm", "color", "shape"))) == 130
     try:
         features.feature_names(("bogus",))
     except KeyError:
@@ -238,20 +238,19 @@ def test_glcm_features_shape_and_finite():
 
 
 def test_color_features_shape_and_mask():
+    n = len(features.COLOR_FEATURE_NAMES)
     img = _synthetic_object()
     f_all = features.color_features(img)
-    assert f_all.shape == (18,) and np.all(np.isfinite(f_all))
+    assert f_all.shape == (n,) and np.all(np.isfinite(f_all))
     mask = np.zeros(img.shape[:2], np.uint8)
     mask[40:80, 30:90] = 255
     f_masked = features.color_features(img, mask)
-    assert f_masked.shape == (18,)
-    # empty mask -> zeros, never NaN
+    assert f_masked.shape == (n,)
     f_empty = features.color_features(img, np.zeros(img.shape[:2], np.uint8))
     assert np.all(f_empty == 0)
-    # grayscale fallback still returns 18 finite values (uniform channel -> skew 0, not NaN)
     g = np.full((40, 40), 100, np.uint8)
     fg = features.color_features(g)
-    assert fg.shape == (18,) and np.all(np.isfinite(fg))
+    assert fg.shape == (n,) and np.all(np.isfinite(fg))
 
 
 def test_shape_features_circle_compactness():
@@ -274,7 +273,18 @@ def test_extract_all_matches_feature_names():
     img = _synthetic_object()
     use = ("glcm", "color", "shape")
     v = features.extract_all(img, use=use)
-    assert v.shape == (len(features.feature_names(use)),) == (85,)
+    assert v.shape == (len(features.feature_names(use)),)
+
+
+def test_all_families_finite_and_aligned():
+    img = _synthetic_object()
+    use = ("glcm", "color", "huehist", "lbp", "shape", "hu", "fourier", "geom", "zernike", "signature")
+    v = features.extract_all(img, use=use)
+    assert v.shape == (len(features.feature_names(use)),)
+    assert np.all(np.isfinite(v))
+    for fam in use:
+        vec = features.extract_all(img, use=(fam,))
+        assert vec.shape == (len(features.feature_names((fam,))),), fam
 
 
 def test_optional_descriptors():
