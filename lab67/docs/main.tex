@@ -84,18 +84,16 @@ siatką $8{\times}8$. Kluczowe jest, że w przypadku kolorowych obrazów dokonyw
 
 \item \textbf{Segmentacja obiektu od tła}
 
-Segmentacja realizowana jest progowaniem globalnym metodą Otsu. Algorytm
-automatycznie wyznacza próg podziału na podstawie histogramu jasności obrazu,
-szukając takiej wartości, która najlepiej rozdziela piksele tła od pikseli
-obiektu. Działa to dobrze dla zdjęć liści i owoców, gdzie obiekt i tło różnią
-się wyraźnie jasnością (obiekt jest zazwyczaj ciemniejszy lub bardziej
-nasycony niż jednolite tło fotografii). Jeśli większość pikseli należy do tła
-(powoduje to jasną maskę), wynik jest automatycznie inwertowany, tak aby obiekt zawsze
-odpowiadał wartości 255. Uzyskana maska binarna jest następnie czyszczona, poprzez użycie
-otwarcia eliptycznego jądrem $5{\times}5$, co usuwa małe fałszywe plamy, a domknięcie
-tym samym jądrem uszczelnia dziury wewnątrz obiektu. Na koniec zachowywana jest
-wyłącznie największa składowa spójna, co eliminuje oderwane fragmenty tła
-pozostałe po progowaniu.
+Owoce mają ciepłe barwy, dlatego segmentację realizujemy progowaniem
+w~przestrzeni HSV: maskę obiektu tworzą piksele o odcieniu w zakresie
+czerwieni/pomarańczu (z dwóch przedziałów, bo czerwień zawija się wokół $H=0$).
+Progowanie globalne Otsu, oparte na jasności, zawodziło na zdjęciach
+z~kolorowym lub zielonym tłem (np.\ pomidory na krzaku), dlatego wybraliśmy
+segmentację po kolorze. Uzyskaną maskę binarną czyścimy operacjami
+morfologicznymi: otwarcie eliptycznym jądrem $5{\times}5$ usuwa małe fałszywe
+plamy, a domknięcie tym samym jądrem uszczelnia dziury wewnątrz obiektu. Na
+koniec zachowywana jest wyłącznie największa składowa spójna, co eliminuje
+oderwane fragmenty tła.
 
 \begin{figure}[htp]
     \centering
@@ -112,36 +110,33 @@ pozostałe po progowaniu.
 % ============================================================ %
 \section{Ekstrakcja cech}
 % ============================================================ %
-\subsection*{Ekstrakcja cech}
+Każdy obraz reprezentowany jest wektorem \textbf{203 cech} liczonych na
+pikselach obiektu (maska segmentacji), w trzech grupach. Preferujemy
+deskryptory niezmiennicze względem skali i obrotu, bo zdjęcia mają różną
+rozdzielczość i orientację.
 
-Każdy obraz reprezentowany jest wektorem 85 cech, łączącym trzy kategorie identyfikujące jego cechy: teksturę, kolor i kształt.
-
-\textbf{Tekstura (GLCM, 56 cech).} Macierz współwystąpień poziomów szarości
-budowana jest po uprzedniej kwantyzacji obrazu do 32 poziomów, co zapewnia
-gęste wypełnienie macierzy przy ograniczonym szumie statystycznym. Obliczenia
-prowadzone są dla dwóch odległości między pikselami ($d \in \{1, 3\}$) i czterech
-kątów ($0°, 45°, 90°, 135°$), co pozwala uchwycić zarówno drobną, jak i grubszą
-teksturę niezależnie od kierunku. Z każdej płaszczyzny wyznaczane są deskryptory
-Haralicka (kontrast, niepodobieństwo, jednorodność, energia, korelacja, ASM)
-oraz entropia liczona ręcznie. Cechy tekstury są szczególnie istotne przy
-rozróżnianiu chorych i zdrowych liści, gdzie zmiany chorobowe tworzą
-charakterystyczne, nieregularne wzory powierzchni.
+\textbf{Tekstura (66 cech).} Macierz GLCM (56 cech) liczona po kwantyzacji do
+32 poziomów, dla odległości $d\in\{1,3\}$ i kątów $0°,45°,90°,135°$; z~każdej
+płaszczyzny deskryptory Haralicka (kontrast, niepodobieństwo, jednorodność,
+energia, korelacja, ASM) oraz entropia. Dochodzi histogram lokalnych wzorców
+binarnych LBP (10 cech, wariant \emph{uniform}, $P=8$). Tekstura odróżnia
+gładką, błyszczącą skórkę pomidora od matowej powierzchni jabłka.
 \\
 
-\textbf{Kolor (18 cech).} Dla każdego z sześciu kanałów (RGB i HSV) wyznaczane
-są trzy statystyki: średnia, odchylenie standardowe i skośność rozkładu.
-Obliczenia prowadzone są wyłącznie na pikselach należących do obszaru obiektu
-wskazanego przez maskę segmentacji, dzięki czemu czarne tło nie zaburza
-wyników. Przestrzeń HSV uzupełnia RGB, ponieważ odcień $H$ i nasycenie $S$
-są bardziej odporne na zmienność oświetlenia niż surowe wartości kanałów
-czerwonego, zielonego i niebieskiego.
+\textbf{Kolor (75 cech).} Dla 9 kanałów (RGB, HSV, CIELAB) liczymy 7 statystyk:
+średnią, odchylenie, skośność, medianę, kurtozę i kwartyle $Q_1, Q_3$
+(63 cechy) oraz 12-binowy histogram odcienia (\emph{Hue}). Kanały $a^*, b^*$
+z~przestrzeni Lab dobrze rozdzielają czerwień od zieleni; wszystkie statystyki
+liczone są na masce, więc tło nie zaburza wyników.
 \\
 
-\textbf{Kształt (11 cech).} Z największego konturu wyznaczonego na masce binarnej obliczane są: pole powierzchni, obwód, średnica zastępcza (średnica koła o takim samym polu), wymiary prostokąta ograniczającego, współczynnik wypełnienia (extent), stopień upakowania (okrągłość) oraz wydłużenie (asymetria) dopasowanej elipsy. Uzupełniają je statystyki promieni od środka ciężkości (geometrycznego) do punktów konturu (maksymalny, minimalny, średni). Stopień upakowania i wydłużenie elipsy są niezależne od skali obrazu, co zabezpiecza przed wpływem różnych rozdzielczości wejściowych
-% TODO: które rodziny ostatecznie użyto (use=...) i dlaczego (np. rozkłady cech).
-% TODO: wstawić viz.plot_feature_distributions dla 3-4 najbardziej różnicujących cech.
+\textbf{Kształt (62 cechy).} Z~największego konturu: cechy geometryczne (pole,
+obwód, zwartość, mimośród elipsy, \emph{extent}, promienie; 11 cech),
+7 momentów Hu, 15 deskryptorów Fouriera, wymiar fraktalny krawędzi (metoda
+\emph{box-counting}), miary otoczki wypukłej (\emph{solidity}, \emph{convexity})
+z~proporcją boków (4 cechy) oraz 25 momentów Zernike'a (rząd $\le 8$, moduły).
+Momenty Hu, Fouriera i Zernike'a są niezmiennicze względem obrotu i skali.
 
-\newpage
 % ============================================================ %
 \section{Klasyfikacja i dobór parametrów}
 % ============================================================ %
@@ -164,7 +159,7 @@ wyciek informacji z~danych walidacyjnych.
 \\
 
 Dobór hiperparametrów przeprowadzono metodą przeszukiwania siatki
-(\texttt{GridSearchCV}
+(\texttt{GridSearchCV}) z~walidacją krzyżową ze stratyfikacją
 (\texttt{StratifiedKFold}).
 Kryterium optymalizacji stanowiła miara $F_1$ uśredniona makro, która
 równomiernie penalizuje błędy na każdej klasie niezależnie od jej liczebności.
@@ -177,57 +172,61 @@ $d \in \{5, 10, 20, \infty\}$, minimalną liczbę próbek w liściu
 $n_\text{leaf} \in \{1, 2, 5\}$ oraz kryterium podziału (Gini / entropia).
 Las losowy strojono w zakresie liczby drzew $\{100, 200, 400\}$, maksymalnej
 głębokości oraz liczby cech rozważanych w węźle (\texttt{sqrt}, \texttt{log2}).
-Zbiór danych był dostarczony z~gotowym podziałem na podzbiór treningowy i
-testowy (\texttt{presplit = True}), dlatego walidacja krzyżowa odbywała się
-wyłącznie w obrębie zbioru treningowego, a wyniki końcowe wyznaczano na
-wydzielonym zbiorze testowym.
-
-Zmieniłem temat na jabłka vs. pomidory i dodałem wzmiankę o gotowym podziale train/test (presplit = True), który jest charakterystyczny właśnie dla tego datasetu.
+Zbiór ma gotowy podział na trening i test, więc strojenie hiperparametrów
+(walidacja krzyżowa) odbywało się tylko w obrębie treningu; najlepszy model
+wybrano na zbiorze walidacyjnym (20\% treningu), a metryki końcowe policzono
+raz na zbiorze testowym.
 
 % ============================================================ %
-\section{Wyniki i krytyczna analiza}
+\section{Wyniki i analiza}
 % ============================================================ %
-Końcową ocenę przeprowadzono \emph{raz}, na wydzielonym zbiorze testowym.
-Tabela~\ref{tab:wyniki} zestawia metryki; raportujemy średnie makro
-(traktują klasy równo) oraz ważone.
+Końcową ocenę przeprowadzono \emph{raz}, na wydzielonym zbiorze testowym
+(97 zdjęć). Tabela~\ref{tab:wyniki} zestawia metryki (średnie makro).
 
 \begin{table}[h]
   \centering\small
-  \caption{Metryki na zbiorze testowym. % TODO: uzupełnić liczbami z metrics.compare_models
-  }
+  \caption{Metryki na zbiorze testowym; najlepszy model: kNN.}
   \label{tab:wyniki}
   \begin{tabular}{lcccc}
     \toprule
-    Model & Accuracy & Precision\textsubscript{macro} & Recall\textsubscript{macro} & F1\textsubscript{macro} \\
+    Model & Accuracy & Precyzja\textsubscript{makro} & Czułość\textsubscript{makro} & $F_1$\textsubscript{makro} \\
     \midrule
-    SVM              & -- & -- & -- & -- \\
-    Drzewo decyzyjne & -- & -- & -- & -- \\
-    Las losowy       & -- & -- & -- & -- \\
+    kNN              & \textbf{0,814} & 0,815 & 0,807 & \textbf{0,810} \\
+    Drzewo decyzyjne & 0,773 & 0,779 & 0,761 & 0,764 \\
+    Regresja log.    & 0,763 & 0,775 & 0,747 & 0,750 \\
+    Las losowy       & 0,753 & 0,751 & 0,745 & 0,747 \\
+    SVM              & 0,753 & 0,761 & 0,738 & 0,740 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\begin{figure}[h]
-  \centering
-  % TODO: viz.plot_confusion_matrix(...) -> fig.savefig("figures/confusion.png")
-  \fbox{\parbox[c][2.6cm][c]{0.5\linewidth}{\centering\small
-    [Rys.~--- macierz pomyłek najlepszego modelu]}}
-  \caption{Macierz pomyłek najlepszego klasyfikatora na zbiorze testowym.}
-  \label{fig:cm}
-\end{figure}
+\textbf{Analiza.} Najlepszy jest kNN: accuracy 0,814 i $F_1$\textsubscript{makro}
+0,810 -- znacznie powyżej poziomu bazowego klasy większościowej (0,557). Klasy
+są prawie zbalansowane (54/43), więc średnie makro i ważone są zbliżone. Jabłka
+rozpoznawane są lepiej (czułość 0,87) niż pomidory (0,74); w macierzy pomyłek
+model bierze 11 pomidorów za jabłka i 7 jabłek za pomidory.
 
-\textbf{Analiza.} % TODO: napisać autorskie wnioski (najważniejsza część oceny):
-% - która rodzina cech daje największy wkład (feature importance / rozkłady)?
-% - które klasy są mylone i dlaczego (off-diagonal macierzy pomyłek)?
-% - rozbieżność accuracy vs F1_macro przy niezbalansowanych klasach?
-% - wpływ preprocessingu/segmentacji na wynik (ablacja)?
-[do uzupełnienia po eksperymentach]
+Aby sprawdzić, które cechy realnie działają, policzyliśmy ważność cech
+(\textit{Random Forest}) oraz ablację rodzin (ten sam klasyfikator SVM i
+walidacja krzyżowa, zmieniany tylko zestaw cech). Oba ujęcia są zgodne: najwięcej
+wnosi \textbf{tekstura} (ważność GLCM 0,45; samodzielnie najlepsza rodzina,
+$F_1$\,0,757), a~druga jest \textbf{barwa} (0,26) -- zwłaszcza histogram odcienia
+i kanał $b^*$ z~Lab. Kształt (Zernike, Fourier, Hu, geometria) wnosi najmniej:
+oba owoce są podobnie okrągłe. Pełny zestaw cech ($F_1$\,0,785) bije każdą
+pojedynczą rodzinę, a maska HSV daje lepszy wynik niż Otsu (0,747 vs 0,738);
+rzut PCA pokazuje silne nakładanie się klas, ograniczające skuteczność cech
+klasycznych.
 
 % ============================================================ %
 \section{Wnioski}
 % ============================================================ %
-% TODO: 3-5 zdań podsumowania: najlepsza konfiguracja, ograniczenia, co dalej.
-[do uzupełnienia]
+Klasyczny potok (segmentacja HSV, 203 cechy z trzech grup, strojenie
+\texttt{GridSearchCV}) sklasyfikował jabłka i pomidory z accuracy 0,814 i
+$F_1$\textsubscript{makro} 0,810, wyraźnie powyżej poziomu bazowego 0,557.
+Najwięcej wniosła tekstura, wsparta kolorem; kształt okazał się mało przydatny
+przy obiektach o zbliżonej, okrągłej sylwetce. Głównym ograniczeniem jest sam
+zbiór -- obie klasy bywają czerwone i okrągłe, a część zdjęć to kiście lub
+owoce pokrojone, co obniża górną granicę skuteczności metod klasycznych.
 
 % ============================================================ %
 \begin{thebibliography}{9}
@@ -239,7 +238,13 @@ Tabela~\ref{tab:wyniki} zestawia metryki; raportujemy średnie makro
 \bibitem{sklearn} F.~Pedregosa i in.,
   \emph{Scikit-learn: Machine Learning in Python}, JMLR, 2011.
 \bibitem{opencv} G.~Bradski, \emph{The OpenCV Library}, Dr.~Dobb's Journal, 2000.
-% TODO: dodać źródło zbioru danych (np. PlantVillage) oraz pozostałe odnośniki.
+\bibitem{lbp} T.~Ojala, M.~Pietikäinen, T.~Mäenpää, \emph{Multiresolution
+  Gray-Scale and Rotation Invariant Texture Classification with Local Binary
+  Patterns}, IEEE TPAMI, 2002.
+\bibitem{hu} M.-K. Hu, \emph{Visual Pattern Recognition by Moment Invariants},
+  IRE Trans. Information Theory, 1962.
+\bibitem{zernike} A.~Khotanzad, Y.~H. Hong, \emph{Invariant Image Recognition
+  by Zernike Moments}, IEEE TPAMI, 1990.
 \end{thebibliography}
 
 \end{document}
