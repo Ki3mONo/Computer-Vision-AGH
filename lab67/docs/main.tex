@@ -1,0 +1,337 @@
+% Dokumentacja projektu — Wizja komputerowa (AGH)
+% Kompilacja:  pdflatex dokumentacja.tex   (dwukrotnie, dla spisu i odnośników)
+% UWAGA: limit 5 stron (z obrazami, tabelami i bibliografią włącznie).
+%        Przekroczenie limitu = 0 pkt. Marginesy i odstępy są celowo zwarte.
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{siunitx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+
+% Ścieżka do rysunków eksportowanych z notatnika (viz.* zwraca obiekt Figure,
+% który można zapisać przez fig.savefig("docs/figures/...")).
+\graphicspath{{figures/}}
+\title{\vspace{-1.5em}Klasyfikacja obrazów metodami klasycznej wizji komputerowej}
+
+\author{
+    \begin{tabular}{c}
+        \small Maciej Kmąk \quad \small Hubert Miklas \quad \small Mateusz Wójcik \\[0.5em]
+        \small Akademia Górniczo-Hutnicza \\
+        \small Systemy Wizyjne
+    \end{tabular}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+% ============================================================ %
+\section{Wprowadzenie i zbiór danych}
+% ============================================================ %
+Celem projektu jest klasyfikacja obrazów wyłącznie metodami klasycznej wizji
+komputerowej i uczenia maszynowego. Działanie projektu obejmuje:
+wczytanie danych, preprocessing analizowanych obrazów, ekstrakcję cech, klasyfikację oraz dobór
+parametrów na zbiorze treningowo-walidacyjnym i ocenę na osobnym zbiorze
+testowym. Pracujemy na dwóch zbiorach zawartych w poleceniu. Pierwszy zawiera próbkę 164 obrazów treningowych jabłek i 130 obrazów treningowych zawierających zdjęcia pomidorów. Zbiór testowy zawiera odpowiednio 54 zdjęcia jabłek i 43 zdjęcia pomidorów.
+
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=0.7\linewidth]{apple_tomato.png}
+    \caption{Przykład danych treningowych do klasyfikacji pomidorów i jabłek.}
+    \label{fig:dataset}
+\end{figure}
+
+% ============================================================ %
+\section{Preprocessing}
+% ============================================================ %
+
+Wszystkie obrazy przetwarzane są przez łańcuch kroków zaimplementowany
+w module \texttt{preprocessing} (funkcja \texttt{preprocess}). Kolejność operacji jest
+konfigurowana parametrem \texttt{steps}; Poniższy opis skupia się na wiariancie domyślnym stosowanych w tym projekcie.
+
+\begin{itemize}\itemsep1pt
+
+\item \textbf{Usunięcie artefaktów}
+
+Pierwszym krokiem jest filtracja medianowa wybrana ze względu na skuteczne usuwanie szumu typu
+\emph{sól i pieprz} oraz bloki kompresji JPEG. Filtr medianowy zachowuje krawędzie
+obiektu lepiej niż rozmycie Gaussa, co jest kluczowe dla późniejszej segmentacji.
+
+\item \textbf{Korekcja balansu bieli}
+
+Zdjęcia roślin i owoców często charakteryzują się dominującą barwą, co może skutkować zaburzeniem odcieni kolorystycznych. W celu redukcji zjawiska stosowana jest metoda \emph{gray-world}, polegająca na skalowaniu każdego kanału RGB w taki sposób, aby jego średni piksel odpowiadał średniej globalnej jasności obrazu. Wyrównanie redukuje systematyczny odcień, dzięki czemu cechy koloru w tym wartości odcienia są porównywalne między obrazami.
+
+\item \textbf{Poprawa kontrastu}
+
+Kontrast wzmacniany jest algorytmem CLAHE (\emph{Contrast Limited Adaptive
+Histogram Equalization}) z parametrami \texttt{clip\_limit}\,=\,2{,}0 i
+siatką $8{\times}8$. Kluczowe jest, że w przypadku kolorowych obrazów dokonywana jest konwersja do przestrzeni LAB, a wyrównanie histogramu przeprowadzane jest wyłącznie na kanale jasności $L$, a nie na kanałach RGB oddzielnie. Dzięki temu nasycenie i barwa pozostają niezmienione, a wzmocnieniu ulega jedynie kontrast lokalny. Wybór algorytmu CLAHE jest motywowany działaniem lokalnym algorytmu, pozwalającym uzyskiwać zadowalające rezultaty zarówno na jasnych, jak i ciemnych partiach obrazu oraz odpornością na tworzenie szumów obrazu.
+
+\item \textbf{Segmentacja obiektu od tła}
+
+Owoce mają ciepłe barwy, dlatego segmentację realizujemy progowaniem
+w~przestrzeni HSV: maskę obiektu tworzą piksele o odcieniu w zakresie
+czerwieni/pomarańczu (z dwóch przedziałów, bo czerwień zawija się wokół $H=0$).
+Progowanie globalne Otsu, oparte na jasności, zawodziło na zdjęciach
+z~kolorowym lub zielonym tłem (np.\ pomidory na krzaku), dlatego wybraliśmy
+segmentację po kolorze (por.\ Rys.~\ref{fig:seg}). Uzyskaną maskę binarną czyścimy operacjami
+morfologicznymi: otwarcie eliptycznym jądrem $5{\times}5$ usuwa małe fałszywe
+plamy, a domknięcie tym samym jądrem uszczelnia dziury wewnątrz obiektu. Na
+koniec zachowywana jest wyłącznie największa składowa spójna, co eliminuje
+oderwane fragmenty tła.
+
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=0.7\linewidth]{preprocess.png}
+    \caption{Przykład łańcucha preprocessingu: oryginał (lewo),
+           obraz po korekcji kontrastu i balansu bieli (środek),
+           maska segmentacji (prawo).}
+    \label{fig:preproc}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\linewidth]{segmentation.png}
+    \caption{Porównanie segmentacji: oryginał, maska Otsu (rozpada się na
+             kolorowym/zielonym tle) oraz maska HSV (trzyma kształt owocu).}
+    \label{fig:seg}
+\end{figure}
+
+\end{itemize}
+
+
+% ============================================================ %
+\section{Ekstrakcja cech}
+% ============================================================ %
+Każdy obraz reprezentowany jest wektorem \textbf{203 cech} liczonych na
+pikselach obiektu (maska segmentacji), w trzech grupach. Preferujemy
+deskryptory niezmiennicze względem skali i obrotu, bo zdjęcia mają różną
+rozdzielczość i orientację.
+
+\textbf{Tekstura (66 cech).} Macierz GLCM (56 cech) liczona po kwantyzacji do
+32 poziomów, dla odległości $d\in\{1,3\}$ i kątów $0°,45°,90°,135°$; z~każdej
+płaszczyzny deskryptory Haralicka (kontrast, niepodobieństwo, jednorodność,
+energia, korelacja, ASM) oraz entropia. Dochodzi histogram lokalnych wzorców
+binarnych LBP (10 cech, wariant \emph{uniform}, $P=8$). Tekstura odróżnia
+gładką, błyszczącą skórkę pomidora od matowej powierzchni jabłka.
+\\
+
+\textbf{Kolor (75 cech).} Dla 9 kanałów (RGB, HSV, CIELAB) liczymy 7 statystyk:
+średnią, odchylenie, skośność, medianę, kurtozę i kwartyle $Q_1, Q_3$
+(63 cechy) oraz 12-binowy histogram odcienia (\emph{Hue}). Kanały $a^*, b^*$
+z~przestrzeni Lab dobrze rozdzielają czerwień od zieleni; wszystkie statystyki
+liczone są na masce, więc tło nie zaburza wyników.
+\\
+
+\textbf{Kształt (62 cechy).} Z~największego konturu: cechy geometryczne (pole,
+obwód, zwartość, mimośród elipsy, \emph{extent}, promienie; 11 cech),
+7 momentów Hu, 15 deskryptorów Fouriera, wymiar fraktalny krawędzi (metoda
+\emph{box-counting}), miary otoczki wypukłej (\emph{solidity}, \emph{convexity})
+z~proporcją boków (4 cechy) oraz 25 momentów Zernike'a (rząd $\le 8$, moduły).
+Momenty Hu, Fouriera i Zernike'a są niezmiennicze względem obrotu i skali.
+
+% ============================================================ %
+\section{Klasyfikacja i dobór parametrów}
+% ============================================================ %
+
+Do klasyfikacji owoców (jabłka vs.\ pomidory) zastosowano pięć klasycznych
+algorytmów uczenia maszynowego dostępnych w bibliotece \texttt{scikit-learn}:
+maszynę wektorów nośnych (SVM), drzewo decyzyjne (\textit{Decision Tree}),
+las losowy (\textit{Random Forest}), klasyfikator $k$ najbliższych sąsiadów
+(kNN) oraz regresję logistyczną.
+Każdy klasyfikator osadzono wewnątrz potoku (\texttt{Pipeline}) poprzedzonego
+standaryzacją cech (\texttt{StandardScaler}).
+Skalowanie jest niezbędne dla metod opartych na odległości - SVM i kNN -
+ponieważ wyekstrahowane rodziny cech operują na bardzo różnych skalach wartości:
+cechy tekstury GLCM mieszczą się w przedziale $[0, 1]$, podczas gdy deskryptory
+kształtu takie jak pole powierzchni (\textit{area}) osiągają wartości rzędu
+tysięcy pikseli.
+Umieszczenie skalera \emph{wewnątrz} potoku gwarantuje, że parametry
+normalizacji są wyznaczane wyłącznie na foldzie treningowym, co eliminuje
+wyciek informacji z~danych walidacyjnych.
+\\
+
+Dobór hiperparametrów przeprowadzono metodą przeszukiwania siatki
+(\texttt{GridSearchCV}) z~walidacją krzyżową ze stratyfikacją
+(\texttt{StratifiedKFold}).
+Kryterium optymalizacji stanowiła miara $F_1$ uśredniona makro, która
+równomiernie penalizuje błędy na każdej klasie niezależnie od jej liczebności.
+Dla SVM przeszukiwano kombinacje parametru regularyzacji
+$C \in \{0.1, 1, 10, 100\}$, szerokości jądra RBF
+$\gamma \in \{\texttt{scale}, 0.01, 0.001\}$ oraz typu jądra
+(\texttt{rbf}, \texttt{linear}).
+Dla drzewa decyzyjnego testowano maksymalną głębokość
+$d \in \{5, 10, 20, \infty\}$, minimalną liczbę próbek w liściu
+$n_\text{leaf} \in \{1, 2, 5\}$ oraz kryterium podziału (Gini / entropia).
+Las losowy strojono w zakresie liczby drzew $\{100, 200, 400\}$, maksymalnej
+głębokości oraz liczby cech rozważanych w węźle (\texttt{sqrt}, \texttt{log2}).
+Zbiór ma gotowy podział na trening i test, więc strojenie hiperparametrów
+(walidacja krzyżowa) odbywało się tylko w obrębie treningu; najlepszy model
+wybrano na zbiorze walidacyjnym (20\% treningu), a metryki końcowe policzono
+raz na zbiorze testowym.
+
+% ============================================================ %
+\section{Wyniki i analiza}
+% ============================================================ %
+Końcową ocenę przeprowadzono \emph{raz}, na wydzielonym zbiorze testowym
+(97 zdjęć). Tabela~\ref{tab:wyniki} zestawia metryki (średnie makro).
+
+\begin{table}[h]
+  \centering\small
+  \caption{Metryki na zbiorze testowym; najlepszy model: kNN.}
+  \label{tab:wyniki}
+  \begin{tabular}{lcccc}
+    \toprule
+    Model & Accuracy & Precyzja\textsubscript{makro} & Czułość\textsubscript{makro} & $F_1$\textsubscript{makro} \\
+    \midrule
+    kNN              & \textbf{0,814} & 0,815 & 0,807 & \textbf{0,810} \\
+    Drzewo decyzyjne & 0,773 & 0,779 & 0,761 & 0,764 \\
+    Regresja log.    & 0,763 & 0,775 & 0,747 & 0,750 \\
+    Las losowy       & 0,753 & 0,751 & 0,745 & 0,747 \\
+    SVM              & 0,753 & 0,761 & 0,738 & 0,740 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Analiza.} Najlepszy jest kNN: accuracy 0,814 i $F_1$\textsubscript{makro}
+0,810 -- znacznie powyżej poziomu bazowego klasy większościowej (0,557). Klasy
+są prawie zbalansowane (54/43), więc średnie makro i ważone są zbliżone. Jabłka
+rozpoznawane są lepiej (czułość 0,87) niż pomidory (0,74); w macierzy pomyłek
+(Rys.~\ref{fig:conf}) model bierze 11 pomidorów za jabłka i 7 jabłek za pomidory.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.42\linewidth}
+    \centering\includegraphics[width=\linewidth]{confusion.png}
+    \caption{Macierz pomyłek (kNN).}\label{fig:conf}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.55\linewidth}
+    \centering\includegraphics[width=\linewidth]{feat_importance.png}
+    \caption{Ważność cech wg rodziny.}\label{fig:imp}
+  \end{subfigure}
+  \caption{Najlepszy model i wkład poszczególnych rodzin cech.}
+\end{figure}
+
+Aby sprawdzić, które cechy realnie działają, policzyliśmy ważność cech
+(\textit{Random Forest}) oraz ablację rodzin (ten sam klasyfikator SVM i
+walidacja krzyżowa, zmieniany tylko zestaw cech). Oba ujęcia są zgodne: najwięcej
+wnosi \textbf{tekstura} (ważność GLCM 0,45 -- Rys.~\ref{fig:imp}; samodzielnie
+najlepsza rodzina, $F_1$\,0,757), a~druga jest \textbf{barwa} (0,26) -- zwłaszcza
+histogram odcienia i kanał $b^*$ z~Lab. Kształt (Zernike, Fourier, Hu, geometria)
+wnosi najmniej: oba owoce są podobnie okrągłe. Pełny zestaw cech bije każdą
+pojedynczą rodzinę (Rys.~\ref{fig:abl}; $F_1$\,0,785), a maska HSV daje lepszy
+wynik niż Otsu (0,747 vs 0,738); rzut PCA (Rys.~\ref{fig:pca}) pokazuje silne
+nakładanie się klas, ograniczające skuteczność cech klasycznych.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.52\linewidth}
+    \centering\includegraphics[width=\linewidth]{ablation.png}
+    \caption{Ablacja rodzin cech (SVM, CV).}\label{fig:abl}
+  \end{subfigure}\hfill
+  \begin{subfigure}{0.44\linewidth}
+    \centering\includegraphics[width=\linewidth]{pca.png}
+    \caption{Rzut PCA cech treningowych.}\label{fig:pca}
+  \end{subfigure}
+  \caption{Analiza cech: ablacja rodzin oraz rozkład klas w 2D (PCA).}
+\end{figure}
+
+% ============================================================ %
+\section{Wnioski}
+% ============================================================ %
+Podstawowe działanie (segmentacja HSV, 203 cechy z trzech grup, strojenie
+\texttt{GridSearchCV}) sklasyfikował jabłka i pomidory z accuracy 0,814 i
+$F_1$\textsubscript{makro} 0,810 -- o ponad 25 punktów procentowych powyżej
+poziomu bazowego (0,557). Zbiór jest przy tym wyjątkowo niewdzięczny: klasy
+silnie się nakładają (oba owoce bywają czerwone i okrągłe), a część zdjęć to
+kiście, owoce pokrojone czy przypadki o wątpliwych etykietach Rys. \ref{fig:ogor}. W tym kontekście
+\textbf{81,4\% accuracy traktujemy jako wynik bardzo dobry} -- bliski
+praktycznej granicy osiągalnej metodami klasycznymi na tych danych. Najwięcej
+wniosła tekstura, wsparta kolorem; kształt okazał się mało przydatny przy
+obiektach o zbliżonej, okrągłej sylwetce.
+\begin{figure}[htbp]
+    \centering
+    
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{japko.png}
+        \caption{Czapetka samarangijska \cite{Czapetka} -- \textit{ang. Java apple \cite{java}}}
+        \label{fig:gruchanie}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{owad.png}
+        \caption{Owad - pomidorowy}
+        \label{fig:placeholder_owad}
+    \end{subfigure}
+    \hfill
+    % \begin{subfigure}[b]{0.24\linewidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{joe.png}
+    %     \caption{Joe - Fandom wiki}
+    %     \label{fig:joe-fandom}
+    % \end{subfigure}
+    % \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{whois.png}
+        \caption{Who is Joe? \cite{Joe}}
+        \label{fig:placeholder_jan}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.24\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{ogor.jpeg}
+        \caption{Ogór \cite{Random}}
+        \label{fig:ogor}
+    \end{subfigure}
+    
+    \caption{Wątpliwe etykiety zbioru.}
+    \label{fig:main_figure}
+\end{figure}
+% ============================================================ %
+\begin{thebibliography}{9}
+\small
+\bibitem{otsu} N.~Otsu, \emph{A Threshold Selection Method from Gray-Level
+  Histograms}, IEEE Trans. Systems, Man, and Cybernetics, vol.~9, no.~1, 1979.
+\bibitem{clahe} K.~Zuiderveld, \emph{Contrast Limited Adaptive Histogram
+  Equalization}, w: Graphics Gems IV, Academic Press, 1994.
+\bibitem{haralick} R.~M. Haralick, K.~Shanmugam, I.~Dinstein,
+  \emph{Textural Features for Image Classification}, IEEE Trans. SMC, 1973.
+\bibitem{lbp} T.~Ojala, M.~Pietik\"ainen, T.~M\"aenp\"a\"a, \emph{Multiresolution
+  Gray-Scale and Rotation Invariant Texture Classification with Local Binary
+  Patterns}, IEEE TPAMI, vol.~24, no.~7, 2002.
+\bibitem{hu} M.-K. Hu, \emph{Visual Pattern Recognition by Moment Invariants},
+  IRE Trans. Information Theory, vol.~8, no.~2, 1962.
+\bibitem{zernike} A.~Khotanzad, Y.~H. Hong, \emph{Invariant Image Recognition
+  by Zernike Moments}, IEEE TPAMI, vol.~12, no.~5, 1990.
+\bibitem{fourier} C.~T. Zahn, R.~Z. Roskies, \emph{Fourier Descriptors for
+  Plane Closed Curves}, IEEE Trans. Computers, vol.~C-21, no.~3, 1972.
+\bibitem{opencv} G.~Bradski, \emph{The OpenCV Library}, Dr.~Dobb's Journal of
+  Software Tools, 2000.
+\bibitem{skimage} S.~van der Walt i in., \emph{scikit-image: image processing
+  in Python}, PeerJ 2:e453, 2014.
+\bibitem{sklearn} F.~Pedregosa i in., \emph{Scikit-learn: Machine Learning in
+  Python}, JMLR, vol.~12, 2011.
+\bibitem{Joe} https://veggietales.fandom.com/wiki/Joe
+\bibitem{Random} https://www.youtube.com/watch?v=j4Ph02gzqmY
+\bibitem{Czapetka} https://pl.wikipedia.org/wiki/Czapetka\_samarangijska
+\bibitem{java} https://en.wikipedia.org/wiki/Syzygium\_samarangense
+\end{thebibliography}
+
+\end{document}
